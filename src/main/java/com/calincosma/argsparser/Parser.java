@@ -4,15 +4,17 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Parser {
-	
-	//	private static Parser instance = new Parser();
 	
 	public static Parser getInstance() {
 		return new Parser();
@@ -23,7 +25,9 @@ public class Parser {
 	private Set<Field> requiredFields = new HashSet<Field>();
 	private Set<Field> treatedFields = new HashSet<Field>();
 	private Field currentField = null;
-	private Object currentValue = null;
+//	private Object currentValue = null;
+	private int fieldIndex = 1;
+//	private boolean currentValueSet = false;
 	
 	private Parser() {
 	}
@@ -33,6 +37,7 @@ public class Parser {
 		try {
 			T t = clazz.newInstance();
 			
+			/* go through all Args annotations, build helper collections */
 			for (Field field : clazz.getDeclaredFields()) {
 				Arg annotation = field.getAnnotation(Arg.class);
 				if (annotation != null) {
@@ -54,10 +59,12 @@ public class Parser {
 				Field newField = options.get(arg);
 				
 				if (newField != null) {
-					/* it's a switch */
+					/* it's a switch,  */
 					newField.setAccessible(true);
 					
-					if (currentField != null && currentValue == null) {
+					/* if previous field's value wasn't set and it's boolean, set it to true (no param/value necessary). Otherwise throw an exception */
+//					if (currentField != null && currentValue == null) {
+					if (currentField != null && currentField.get(t) == null) {
 						Class type = currentField.getType();
 						if (Boolean.class == type || Boolean.TYPE == type) {
 							setFieldValue(t, Boolean.TRUE, "Couldn't set value for " + arg);
@@ -67,13 +74,46 @@ public class Parser {
 					}
 					
 					currentField = newField;
-					currentValue = null;
+//					currentValue = null;
 				} else {
+					if (currentField == null) {
+						/* treat positional params */
+//						if (fieldIndex > )
+					}
+					
 					/* it's a value/param */
 					Class type = currentField.getType();
 					
 					if (String.class == type) {
+						/* strings get set immediatelly, as they are the easiest param to set */
 						setFieldValue(t, arg, "Couldn't set value for " + arg);
+					} else if (type.isAssignableFrom(Collection.class)) {
+						/* treating collections */
+						if (currentField.get(t) == null) {
+							/* the collection hasn't yet been instantiated. Attempting to do so here. */
+							if (type.isInterface()) {
+								/* if the type is an interface, use a common implementation */
+								if (type.isAssignableFrom(List.class)) {
+									setFieldValue(t, new ArrayList<>(), "Couldn't set value for " + arg);
+//									currentValue = new ArrayList<>();
+								} else if (type.isAssignableFrom(Set.class)) {
+									setFieldValue(t, new HashSet<>(), "Couldn't set value for " + arg);
+//									currentValue = new HashSet<>();
+								} else if (type.isAssignableFrom(Queue.class)) {
+									setFieldValue(t, new LinkedList<>(), "Couldn't set value for " + arg);
+//									currentValue = new LinkedList<>();
+								}
+							} else {
+								/* if the type is a class, instantiate it */
+								setFieldValue(t, type.newInstance(), "Couldn't set value for " + arg);
+//								currentValue = type.newInstance();
+							}
+						} else {
+							/* collection has already been instantiated, just add value to collection */
+//							((Collection<?>)currentValue).add()
+						
+						}
+						
 					} else {
 						Method method = null;
 						try {
@@ -98,27 +138,6 @@ public class Parser {
 						}
 					}
 				}
-				
-				//				if (arg.startsWith("--")) {
-				//					optionName = arg.substring(2, arg.length());
-				//				} else if (arg.startsWith("-")) {
-				//					optionName = arg.substring(1, arg.length());
-				//				}
-				//
-				//				if (optionName != null) {
-				//					if (currentField != null) {
-				//
-				//					}
-				//
-				//					currentField = options.get(optionName);
-				//					if (currentField == null) {
-				//						throw new ArgsParserException("Option " + optionName + " is not defined.");
-				//					}
-				////					currentField.setAccessible(true);
-				//				} else {
-				//
-				//				}
-				
 			}
 			
 			
@@ -156,7 +175,8 @@ public class Parser {
 		try {
 			currentField.set(t, v);
 			requiredFields.remove(currentField);
-			currentField = null;
+			treatedFields.add(currentField);
+//			currentField = null;
 		} catch (IllegalAccessException e) {
 			throw new ArgsParserException(errorMessage);
 		}

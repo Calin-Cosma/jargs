@@ -11,17 +11,24 @@ class ParserTest {
 	Parser parser = Parser.getInstance();
 	
 	@Test
-	void parseString() {
-		String[] params = new String[] {"-m", "This_is_mandatory"};
+	void parseBoolean() {
+		String[] params = new String[] {"-b", "true", "-m", "This_is_mandatory"};
 		MyArgs myArgs = parser.parse(params, MyArgs.class);
-		Assertions.assertEquals("This_is_mandatory", myArgs.getMandatory());
+		Assertions.assertEquals(true, myArgs.isBool());
 	}
 	
 	@Test
-	void parseIntPrimitive() {
-		String[] params = new String[] {"-p", "321456", "-m", "This_is_mandatory"};
+	void parseDouble() {
+		String[] params = new String[] {"-d", "9123.34567", "-m", "This_is_mandatory"};
 		MyArgs myArgs = parser.parse(params, MyArgs.class);
-		Assertions.assertEquals(321456L, myArgs.getPrimitive());
+		Assertions.assertEquals(Double.valueOf("9123.34567"), myArgs.getD());
+	}
+	
+	@Test
+	void parseFloat() {
+		String[] params = new String[] {"-f", "0.55", "-m", "This_is_mandatory"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		Assertions.assertEquals((float)0.55, myArgs.getF());
 	}
 	
 	@Test
@@ -32,10 +39,24 @@ class ParserTest {
 	}
 	
 	@Test
-	void parseBoolean() {
-		String[] params = new String[] {"-b", "true", "-m", "This_is_mandatory"};
+	void parseLong() {
+		String[] params = new String[] {"-l", "847592", "-m", "This_is_mandatory"};
 		MyArgs myArgs = parser.parse(params, MyArgs.class);
-		Assertions.assertEquals(true, myArgs.isBool());
+		Assertions.assertEquals(Long.valueOf(847592), myArgs.getL());
+	}
+	
+	@Test
+	void parseString() {
+		String[] params = new String[] {"-m", "This_is_mandatory"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		Assertions.assertEquals("This_is_mandatory", myArgs.getMandatory());
+	}
+	
+	@Test
+	void parseNegative() {
+		String[] params = new String[] {"-n", "-794590001", "-m", "This_is_mandatory"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		Assertions.assertEquals(-794590001, myArgs.getNegative());
 	}
 	
 	@Test
@@ -44,6 +65,21 @@ class ParserTest {
 			String[] params = new String[] {"-o", "some_text"};
 			MyArgs myArgs = parser.parse(params, MyArgs.class);
 		});
+	}
+	
+	@Test
+	void parseIntPrimitive() {
+		String[] params = new String[] {"-p", "321456", "-m", "This_is_mandatory"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		Assertions.assertEquals(321456L, myArgs.getPrimitive());
+	}
+	
+	
+	@Test
+	void parsePositions() {
+		String[] params = new String[] {"-m", "This_is_mandatory", "101"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		Assertions.assertEquals(101, myArgs.getPos1());
 	}
 	
 }
@@ -94,10 +130,13 @@ class MyArgs {
 	private Set<Integer> tabs;
 	
 	@Arg(position = 1)
-	private String x;
+	private String pos1;
 	
 	@Arg(position = 2)
-	private int[] y;
+	private int pos2;
+	
+	@Arg(position = 3)
+	private int[] pos3;
 	
 	// no switch for z
 	private String z;
@@ -158,12 +197,16 @@ class MyArgs {
 		return tabs;
 	}
 	
-	public String getX() {
-		return x;
+	public String getPos1() {
+		return pos1;
 	}
 	
-	public int[] getY() {
-		return y;
+	public int getPos2() {
+		return pos2;
+	}
+	
+	public int[] getPos3() {
+		return pos3;
 	}
 	
 	public String getZ() {
