@@ -75,12 +75,12 @@ class ParserTest {
 	}
 	
 	
-	@Test
-	void parsePositions() {
-		String[] params = new String[] {"-m", "This_is_mandatory", "101"};
-		MyArgs myArgs = parser.parse(params, MyArgs.class);
-		Assertions.assertEquals(101, myArgs.getPos1());
-	}
+//	@Test
+//	void parsePositions() {
+//		String[] params = new String[] {"-m", "This_is_mandatory", "101"};
+//		MyArgs myArgs = parser.parse(params, MyArgs.class);
+//		Assertions.assertEquals(101, myArgs.getPos1());
+//	}
 	
 }
 

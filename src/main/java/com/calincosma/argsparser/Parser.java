@@ -1,6 +1,7 @@
 package com.calincosma.argsparser;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -25,17 +26,14 @@ public class Parser {
 	private Set<Field> requiredFields = new HashSet<Field>();
 	private Set<Field> treatedFields = new HashSet<Field>();
 	private Field currentField = null;
-//	private Object currentValue = null;
-	private int fieldIndex = 1;
-//	private boolean currentValueSet = false;
 	
 	private Parser() {
 	}
 	
 	
-	public <T extends Object> T parse(String[] args, Class<T> clazz) throws ArgsParserException {
+	public <ARGS extends Object> ARGS parse(String[] argsArray, Class<ARGS> clazz) throws ArgsParserException {
 		try {
-			T t = clazz.newInstance();
+			ARGS args = clazz.newInstance();
 			
 			/* go through all Args annotations, build helper collections */
 			for (Field field : clazz.getDeclaredFields()) {
@@ -55,7 +53,7 @@ public class Parser {
 				}
 			}
 			
-			for (String arg : args) {
+			for (String arg : argsArray) {
 				Field newField = options.get(arg);
 				
 				if (newField != null) {
@@ -63,79 +61,66 @@ public class Parser {
 					newField.setAccessible(true);
 					
 					/* if previous field's value wasn't set and it's boolean, set it to true (no param/value necessary). Otherwise throw an exception */
-//					if (currentField != null && currentValue == null) {
-					if (currentField != null && currentField.get(t) == null) {
+					if (currentField != null && currentField.get(args) == null) {
 						Class type = currentField.getType();
 						if (Boolean.class == type || Boolean.TYPE == type) {
-							setFieldValue(t, Boolean.TRUE, "Couldn't set value for " + arg);
+							setFieldValue(args, currentField, Boolean.TRUE, "Couldn't set value for " + arg);
 						} else {
 							throw new ArgsParserException("Missing value for " + arg);
 						}
 					}
 					
 					currentField = newField;
-//					currentValue = null;
 				} else {
+					/* it's a value */
 					if (currentField == null) {
 						/* treat positional params */
 //						if (fieldIndex > )
 					}
 					
 					/* it's a value/param */
-					Class type = currentField.getType();
+					Class fieldType = currentField.getType();
 					
-					if (String.class == type) {
-						/* strings get set immediatelly, as they are the easiest param to set */
-						setFieldValue(t, arg, "Couldn't set value for " + arg);
-					} else if (type.isAssignableFrom(Collection.class)) {
+//					if (String.class == fieldType) {
+//						/* strings get set immediatelly, as they are the easiest param to set */
+//						setFieldValue(args, currentField, arg, "Couldn't set value for " + arg);
+//					} else
+					
+					if (fieldType.isAssignableFrom(Collection.class)) {
 						/* treating collections */
-						if (currentField.get(t) == null) {
+						if (currentField.get(args) == null) {
 							/* the collection hasn't yet been instantiated. Attempting to do so here. */
-							if (type.isInterface()) {
+							if (fieldType.isInterface()) {
 								/* if the type is an interface, use a common implementation */
-								if (type.isAssignableFrom(List.class)) {
-									setFieldValue(t, new ArrayList<>(), "Couldn't set value for " + arg);
-//									currentValue = new ArrayList<>();
-								} else if (type.isAssignableFrom(Set.class)) {
-									setFieldValue(t, new HashSet<>(), "Couldn't set value for " + arg);
-//									currentValue = new HashSet<>();
-								} else if (type.isAssignableFrom(Queue.class)) {
-									setFieldValue(t, new LinkedList<>(), "Couldn't set value for " + arg);
-//									currentValue = new LinkedList<>();
+								if (fieldType.isAssignableFrom(List.class)) {
+									setFieldValue(args, currentField, new ArrayList<>(), "Couldn't set value for " + arg);
+								} else if (fieldType.isAssignableFrom(Set.class)) {
+									setFieldValue(args, currentField, new HashSet<>(), "Couldn't set value for " + arg);
+								} else if (fieldType.isAssignableFrom(Queue.class)) {
+									setFieldValue(args, currentField, new LinkedList<>(), "Couldn't set value for " + arg);
 								}
 							} else {
 								/* if the type is a class, instantiate it */
-								setFieldValue(t, type.newInstance(), "Couldn't set value for " + arg);
-//								currentValue = type.newInstance();
+								setFieldValue(args, currentField, fieldType.newInstance(), "Couldn't set value for " + arg);
 							}
 						} else {
 							/* collection has already been instantiated, just add value to collection */
-//							((Collection<?>)currentValue).add()
-						
+							//							((Collection<?>)currentValue).add()
+							
 						}
-						
+					} else if (fieldType.isArray()) {
+						Class arrayType = fieldType.getComponentType();
+						/* treating arrays */
+						if (currentField.get(args) == null) {
+							/* the array hasn't yet been instantiated. Attempting to do so here. */
+							java.lang.reflect.Array.newInstance(arrayType, 1);
+						} else {
+							/* collection has already been instantiated, just add value to collection */
+							//							((Collection<?>)currentValue).add()
+							
+						}
 					} else {
-						Method method = null;
-						try {
-							method = type.getMethod("valueOf", String.class);
-						} catch (Exception e) {
-							// e.printStackTrace();
-						}
-						if (method != null && method.getReturnType() == type && Modifier.isStatic(method.getModifiers())) {
-							setFieldValue(t, method.invoke(null, arg), "Argument for " + arg + " must be of type " + type.getName().replaceAll("java.lang.", ""));
-						} else if (Integer.class == type || Integer.TYPE == type) {
-							setFieldValue(t, Integer.valueOf(arg), "Argument for " + arg + " must be of type int");
-						} else if (Long.class == type || Long.TYPE == type) {
-							setFieldValue(t, Long.valueOf(arg), "Argument for " + arg + " must be of type long");
-						} else if (Double.class == type || Double.TYPE == type) {
-							setFieldValue(t, Double.valueOf(arg), "Argument for " + arg + " must be of type double");
-						} else if (Float.class == type || Float.TYPE == type) {
-							setFieldValue(t, Float.valueOf(arg), "Argument for " + arg + " must be of type float");
-						} else if (Short.class == type || Short.TYPE == type) {
-							setFieldValue(t, Short.valueOf(arg), "Argument for " + arg + " must be of type short");
-						} else if (Boolean.class == type || Boolean.TYPE == type) {
-							setFieldValue(t, Boolean.valueOf(arg), "Argument for " + arg + " must be of type " + "Integer");
-						}
+						setFieldValue(args, currentField, getValue(args, arg, fieldType));
 					}
 				}
 			}
@@ -164,20 +149,79 @@ public class Parser {
 				throw new ArgsParserException(message);
 			}
 			
-			return t;
+			return args;
 		} catch (Exception e) {
 			throw new ArgsParserException(e);
 		}
 	}
 	
 	
-	private <Type, Value extends Object> void setFieldValue(Type t, Value v, String errorMessage) {
+	
+	private <ARGS extends Object, VALUE> VALUE getValue(ARGS args, String arg, Class<VALUE> fieldType) throws IllegalAccessException, InvocationTargetException {
+		if (String.class == fieldType) {
+						/* strings get set immediatelly, as they are the easiest param to set */
+//			setFieldValue(args, currentField, arg, "Couldn't set value for " + arg);
+			return (VALUE)arg;
+		}
+		
+		Method method = null;
 		try {
-			currentField.set(t, v);
+			method = fieldType.getMethod("valueOf", String.class);
+		} catch (Exception e) {
+			// e.printStackTrace();
+		}
+		if (method != null && method.getReturnType() == fieldType && Modifier.isStatic(method.getModifiers())) {
+//			setFieldValue(args, currentField, method.invoke(null, arg), "Argument for " + arg + " must be of type " + fieldType.getName().replaceAll("java.lang.", ""));
+			return (VALUE)fieldType.cast(method.invoke(null, arg));
+		} else if (Integer.class == fieldType || Integer.TYPE == fieldType) {
+//			setFieldValue(args, currentField, Integer.valueOf(arg), "Argument for " + arg + " must be of type int");
+			return (VALUE)Integer.valueOf(arg);
+		} else if (Long.class == fieldType || Long.TYPE == fieldType) {
+//			setFieldValue(args, currentField, Long.valueOf(arg), "Argument for " + arg + " must be of type long");
+			return (VALUE)Long.valueOf(arg);
+		} else if (Double.class == fieldType || Double.TYPE == fieldType) {
+//			setFieldValue(args, currentField, Double.valueOf(arg), "Argument for " + arg + " must be of type double");
+			return (VALUE)Double.valueOf(arg);
+		} else if (Float.class == fieldType || Float.TYPE == fieldType) {
+//			setFieldValue(args, currentField, Float.valueOf(arg), "Argument for " + arg + " must be of type float");
+			return (VALUE)Float.valueOf(arg);
+		} else if (Short.class == fieldType || Short.TYPE == fieldType) {
+//			setFieldValue(args, currentField, Short.valueOf(arg), "Argument for " + arg + " must be of type short");
+			return (VALUE)Short.valueOf(arg);
+		} else if (Boolean.class == fieldType || Boolean.TYPE == fieldType) {
+//			setFieldValue(args, currentField, Boolean.valueOf(arg), "Argument for " + arg + " must be of type " + "Integer");
+			return (VALUE)Boolean.valueOf(arg);
+		}
+		return null;
+	}
+	
+	
+	private <ARGS, Value extends Object> void setFieldValue(ARGS args, Field field, Value value) {
+		setFieldValue(args, field, value, "Couldn't set value of field: " + field.getName() + ", value: " + value.toString());
+	}
+	
+	
+	private <ARGS, Value extends Object> void setFieldValue(ARGS args, Field field, Value value, String errorMessage) {
+		try {
+			field.set(args, value);
+			requiredFields.remove(field);
+			treatedFields.add(field);
+		} catch (IllegalAccessException e) {
+			throw new ArgsParserException(errorMessage);
+		}
+	}
+	
+	
+	private <ARGS, Value extends Object> void addFieldValueToCollection(ARGS args, Field field, Value value, String errorMessage) {
+		try {
+			((Collection)field.get(args)).add(getValue(args));
+
+			Object newObject = clazz.newInstance();
+
+			currentField.set(args, value);
 			requiredFields.remove(currentField);
 			treatedFields.add(currentField);
-//			currentField = null;
-		} catch (IllegalAccessException e) {
+		} catch (IllegalAccessException | InstantiationException e) {
 			throw new ArgsParserException(errorMessage);
 		}
 	}
