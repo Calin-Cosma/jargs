@@ -3,8 +3,11 @@ package com.calincosma.argsparser;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 class ParserTest {
 	
@@ -74,6 +77,41 @@ class ParserTest {
 		Assertions.assertEquals(321456L, myArgs.getPrimitive());
 	}
 	
+	@Test
+	void parseStringList() {
+		String[] params = new String[] {"-c", "First_value", "Second_value", "-m", "This_is_mandatory"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		Assertions.assertEquals(Arrays.asList("First_value", "Second_value"), myArgs.getCollection());
+	}
+	
+	@Test
+	void parseIntegerSet() {
+		String[] params = new String[] {"-set", "21", "49", "38", "49", "-m", "This_is_mandatory"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		Set<Integer> set = new HashSet<>();
+		set.addAll(Arrays.asList(21, 49, 38));
+		Assertions.assertEquals(set, myArgs.getSet());
+	}
+	
+	@Test
+	void parseLongTreeSet() {
+		String[] params = new String[] {"-ts", "21", "49", "38", "49", "12", "-m", "This_is_mandatory"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		TreeSet<Long> set = new TreeSet<>();
+		set.addAll(Arrays.asList(12L, 21L, 38L, 49L));
+		Assertions.assertEquals(set, myArgs.getTs());
+	}
+	
+	
+	@Test
+	void parseDoubleArray() {
+		String[] params = new String[] {"-a", "9.345", "-58.31", "12.91", "-m", "This_is_mandatory"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		TreeSet<Long> set = new TreeSet<>();
+		set.addAll(Arrays.asList(12L, 21L, 38L, 49L));
+		Assertions.assertEquals(new double[] {9.345d, -58.31d, 12.91d}, myArgs.getArray());
+	}
+	
 	
 //	@Test
 //	void parsePositions() {
@@ -98,6 +136,9 @@ class MyArgs {
 	
 	@Arg("-d")
 	private Double d;
+	
+	@Arg(value = "-delim", delimiter = ",")
+	private List<String> delimitedList;
 	
 	@Arg("-e")
 	private MyEnum aNumeration;
@@ -126,8 +167,11 @@ class MyArgs {
 	@Arg("-s")
 	private String escapeCharacter;
 	
-	@Arg(value = "-t", delimiter = "|")
-	private Set<Integer> tabs;
+	@Arg(value = "-set")
+	private Set<Integer> set;
+	
+	@Arg(value = "-ts")
+	private TreeSet<Long> ts;
 	
 	@Arg(position = 1)
 	private String pos1;
@@ -155,6 +199,10 @@ class MyArgs {
 	
 	public Double getD() {
 		return d;
+	}
+	
+	public List<String> getDelimitedList() {
+		return delimitedList;
 	}
 	
 	public MyEnum getaNumeration() {
@@ -193,8 +241,12 @@ class MyArgs {
 		return escapeCharacter;
 	}
 	
-	public Set<Integer> getTabs() {
-		return tabs;
+	public Set<Integer> getSet() {
+		return set;
+	}
+	
+	public TreeSet<Long> getTs() {
+		return ts;
 	}
 	
 	public String getPos1() {
