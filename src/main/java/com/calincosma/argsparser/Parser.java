@@ -62,7 +62,6 @@ public class Parser {
 			
 			LinkedList<String> argsList = new LinkedList<>();
 			Collections.addAll(argsList, argsArray);
-			String currentArg = null;
 			List<String> currentValues = new ArrayList<>();
 			
 			while (!argsList.isEmpty()) {
@@ -83,77 +82,6 @@ public class Parser {
 				currentField = null;
 				currentValues.clear();
 			}
-			
-//			for (String arg : argsArray) {
-//				Field newField = options.get(arg);
-//
-//				if (newField != null) {
-//					/* it's a switch,  */
-//					newField.setAccessible(true);
-//
-//					/* if previous field's value wasn't set and it's boolean, set it to true (no param/value necessary). Otherwise throw an exception */
-//					if (currentField != null && currentField.get(args) == null && arrayValues.get(currentField) == null) {
-//						Class type = currentField.getType();
-//						if (Boolean.class == type || Boolean.TYPE == type) {
-//							setFieldValue(args, currentField, Boolean.TRUE, requiredFields, treatedFields);
-//						} else {
-//							throw new ArgsParserException("Missing value for " + arg);
-//						}
-//					}
-//
-//					currentField = newField;
-//				} else {
-//					/* it's a value */
-//					if (currentField == null) {
-//						/* treat positional params */
-////						if (fieldIndex > )
-//					}
-//
-//					/* it's a value/param */
-//					Class fieldType = currentField.getType();
-//
-//					if (Collection.class.isAssignableFrom(fieldType)) {
-//						/* treating collections */
-//						if (currentField.get(args) == null) {
-//							/* the collection hasn't yet been instantiated. Attempting to do so here. */
-//							if (fieldType.isInterface()) {
-//								/* if the type is an interface, use a common implementation */
-//								if (List.class.isAssignableFrom(fieldType)) {
-//									setFieldValue(args, currentField, new ArrayList<>(), requiredFields, treatedFields);
-//								} else if (Set.class.isAssignableFrom(fieldType)) {
-//									setFieldValue(args, currentField, new HashSet<>(), requiredFields, treatedFields);
-//								} else if (Queue.class.isAssignableFrom(fieldType)) {
-//									setFieldValue(args, currentField, new LinkedList<>(), requiredFields, treatedFields);
-//								}
-//							} else {
-//								/* if the type is a class, instantiate it */
-//								setFieldValue(args, currentField, fieldType.newInstance(), requiredFields, treatedFields);
-//							}
-//						}
-//
-//						/* collection has already been instantiated, just add value to collection */
-//						ParameterizedType parameterizedType = (ParameterizedType)currentField.getGenericType();
-//						Class<?> collectionType = (Class<?>)parameterizedType.getActualTypeArguments()[0];
-//						addFieldValueToCollection(args, currentField, arg, collectionType, currentField, requiredFields, treatedFields);
-//
-//					} else if (fieldType.isArray()) {
-//						Class arrayType = fieldType.getComponentType();
-//						/* treating arrays
-//						* array values are kept in ArrayLists for convenience and only set as values on the fields at the end
-//						*/
-//						if (arrayValues.get(currentField) == null) {
-//							/* the ArrayList hasn't yet been instantiated. Attempting to do so here. */
-//							//setFieldValue(args, currentField, buildArrayList(arrayType), requiredFields, treatedFields);
-//							arrayValues.put(currentField, buildArrayList(arrayType));
-//							Arrays.copyOf(currentField.get(args), 2);
-//						}
-//						/* collection has already been instantiated, just add value to collection */
-//						arrayValues.get(currentField).add(getValue(arg, arrayType));
-//					} else {
-//						setFieldValue(args, currentField, getValue(arg, fieldType), requiredFields, treatedFields);
-//					}
-//				}
-//			}
 			
 			
 			if (requiredFields.size() > 0) {
@@ -179,15 +107,6 @@ public class Parser {
 				throw new ArgsParserException(message);
 			}
 			
-			
-			for (Field field : arrayValues.keySet()) {
-				ArrayList arrayList = arrayValues.get(field);
-				Class fieldType = field.getType();
-				Class arrayType = fieldType.getComponentType();
-				setValueAsArray(field, args, arrayList, arrayType);
-			}
-			
-			
 			return args;
 		} catch (Exception e) {
 			throw new ArgsParserException(e);
@@ -196,44 +115,75 @@ public class Parser {
 	
 	
 	
-	private <ARGS, Value extends Object> void setFieldValue(ARGS args, Field field, Value value) {
-		try {
-			field.set(args, value);
-		} catch (IllegalAccessException e) {
-			throw new ArgsParserException("Couldn't set value of field: " + field.getName() + ", value: " + value.toString());
+	/**
+	 * Process the list of values and sets the value of the field as a collection, array, or single object depending on the field type.
+	 *
+	 * @param args
+	 * @param field
+	 * @param values
+	 * @param <ARGS>
+	 * @throws IllegalAccessException
+	 * @throws InstantiationException
+	 */
+	public <ARGS> void setValues(ARGS args, Field field, List<String> values) throws IllegalAccessException, InstantiationException {
+		/* it's a value/param */
+		Class fieldType = field.getType();
+		
+		if (Collection.class.isAssignableFrom(fieldType)) {
+			/* treating collections - attempting to instantiate collection */
+			if (fieldType.isInterface()) {
+				/* if the type is an interface, use a common implementation */
+				if (List.class.isAssignableFrom(fieldType)) {
+					field.set(args, new ArrayList<>());
+				} else if (Set.class.isAssignableFrom(fieldType)) {
+					field.set(args, new HashSet<>());
+				} else if (Queue.class.isAssignableFrom(fieldType)) {
+					field.set(args, new LinkedList<>());
+				}
+			} else {
+				/* if the type is a class, instantiate it */
+				field.set(args, fieldType.newInstance());
+			}
+			
+						
+			/* collection has been instantiated, add values to collection */
+			ParameterizedType parameterizedType = (ParameterizedType)field.getGenericType();
+			Class<?> collectionType = (Class<?>)parameterizedType.getActualTypeArguments()[0];
+			
+			
+			for (String value : values) {
+				((Collection)field.get(args)).add(getValue(value, collectionType));
+			}
+			
+		} else if (fieldType.isArray()) {
+			/* arrays */
+			Class arrayType = fieldType.getComponentType();
+			createArray(args, field, values, arrayType);
+		} else if (values.size() == 1) {
+			/* single values, when the type is not a collection or array, should be single objects */
+			field.set(args, getValue(values.get(0), fieldType));
+		} else {
+			// TODO throw exception because this case is not supported
 		}
 	}
 	
 	
-	
-	private <ARGS, VALUE> void addFieldValueToCollection(ARGS args, Field field, String arg, Class<VALUE> clazz, Field currentField) {
-		try {
-			((Collection)field.get(args)).add(getValue(arg, clazz));
-//			requiredFields.remove(currentField);
-//			treatedFields.add(currentField);
-		} catch (IllegalAccessException e) {
-			throw new ArgsParserException("Couldn't add value to field of type collection: " + field.getName() + ", value: " + arg);
-		}
-	}
-	
-	
-	
-//	private <ARGS, VALUE> void addFieldValueToArray(ARGS args, Field field, String arg, Class<VALUE> clazz) {
-//		try {
-//			((Collection)field.get(args)).add(getValue(arg, clazz));
-//			requiredFields.remove(currentField);
-//			treatedFields.add(currentField);
-//		} catch (IllegalAccessException | InvocationTargetException e) {
-//			throw new ArgsParserException("Couldn't add value to field of type array: " + field.getName() + ", value: " + arg);
-//		}
-//	}
-	
-	
-	
+	/**
+	 * Take a string and return the value depending on the type. Almost all primitive types are supported, String,
+	 * and all objects that have a static method named valueOf that takes a parameter of type String.
+	 *
+	 * This allows any custom classes to be easily adapted.
+	 *
+	 * @param arg
+	 * @param fieldType
+	 * @param <ARGS>
+	 * @param <VALUE>
+	 * @return
+	 */
 	private <ARGS extends Object, VALUE> VALUE getValue(String arg, Class<VALUE> fieldType) {
 		try {
 			if (String.class == fieldType) {
-				/* strings get set immediatelly, as they are the easiest param to set */
+				/* strings get set immediately, as they are the easiest param to set */
 				return (VALUE)arg;
 			}
 			
@@ -243,7 +193,7 @@ public class Parser {
 			} catch (Exception e) {
 			}
 			if (method != null && method.getReturnType() == fieldType && Modifier.isStatic(method.getModifiers())) {
-				return (VALUE)fieldType.cast(method.invoke(null, arg));
+				return fieldType.cast(method.invoke(null, arg));
 			} else if (Integer.class == fieldType || Integer.TYPE == fieldType) {
 				return (VALUE)Integer.valueOf(arg);
 			} else if (Long.class == fieldType || Long.TYPE == fieldType) {
@@ -264,87 +214,18 @@ public class Parser {
 	}
 	
 	
-	public <T> ArrayList<T> buildArrayList(Class<T> clazz) {
-		return new ArrayList<T>();
-	}
-	
-	public <T, ARGS extends Object> void setValueAsArray(Field field, ARGS args, ArrayList arrayList, Class<T> arrayType) throws IllegalAccessException {
-		field.set(args, arrayList.toArray((T[])Array.newInstance(arrayType, 0)));
-	}
-	
-	
-	
-	public <ARGS> void setValues(ARGS args, Field field, List<String> values) throws IllegalAccessException, InstantiationException {
-//		if (field == null) {
-//						/* treat positional params */
-//			//						if (fieldIndex > )
-//		}
-					
-					/* it's a value/param */
-		Class fieldType = field.getType();
-		
-		if (Collection.class.isAssignableFrom(fieldType)) {
-			/* treating collections */
-			
-			/* the collection hasn't yet been instantiated. Attempting to do so here. */
-			if (fieldType.isInterface()) {
-				/* if the type is an interface, use a common implementation */
-				if (List.class.isAssignableFrom(fieldType)) {
-					setFieldValue(args, field, new ArrayList<>());
-				} else if (Set.class.isAssignableFrom(fieldType)) {
-					setFieldValue(args, field, new HashSet<>());
-				} else if (Queue.class.isAssignableFrom(fieldType)) {
-					setFieldValue(args, field, new LinkedList<>());
-				}
-			} else {
-				/* if the type is a class, instantiate it */
-				setFieldValue(args, field, fieldType.newInstance());
-			}
-			
-						
-			/* collection has already been instantiated, just add values to collection */
-			ParameterizedType parameterizedType = (ParameterizedType)field.getGenericType();
-			Class<?> collectionType = (Class<?>)parameterizedType.getActualTypeArguments()[0];
-			
-			
-			for (String value : values) {
-				((Collection)field.get(args)).add(getValue(value, collectionType));
-			}
-//			values.stream().map(v -> getValue(v, collectionType)).collect(Collectors.toList());
-			
-			
-//			addFieldValueToCollection(args, field, arg, collectionType, currentField);
-			
-		} else if (fieldType.isArray()) {
-			Class arrayType = fieldType.getComponentType();
-			
-			createArray(args, field, values, arrayType);
-			
-//			/* treating arrays
-//			* array values are kept in ArrayLists for convenience and only set as values on the fields at the end
-//			*/
-//			if (arrayValues.get(field) == null) {
-//				/* the ArrayList hasn't yet been instantiated. Attempting to do so here. */
-//				//setFieldValue(args, currentField, buildArrayList(arrayType), requiredFields, treatedFields);
-//				arrayValues.put(field, buildArrayList(arrayType));
-//				Arrays.copyOf(field.get(args), 2);
-//			}
-//			/* collection has already been instantiated, just add value to collection */
-//			arrayValues.get(field).add(getValue(arg, arrayType));
-		} else if (values.size() == 1) {
-			setFieldValue(args, field, getValue(values.get(0), fieldType));
-		}
-	}
-	
-	
+	/**
+	 * Creates an array and fills in the values.
+	 *
+	 * @param args
+	 * @param field
+	 * @param values
+	 * @param arrayTypeClass
+	 * @param <ARGS>
+	 * @param <ArrayType>
+	 * @throws IllegalAccessException
+	 */
 	private <ARGS, ArrayType> void createArray(ARGS args, Field field, List<String> values, Class<ArrayType> arrayTypeClass) throws IllegalAccessException {
-//		field.set(args, Array.newInstance(arrayTypeClass, values.size()));
-//		int i = 0;
-//		for (String value : values) {
-//			((ArrayType[])field.get(args))[i++] = getValue(value, arrayTypeClass);
-//		}
-		
-		
 		Object array = Array.newInstance(arrayTypeClass, values.size());
 		int i = 0;
 		for (String value : values) {
