@@ -109,7 +109,7 @@ class ParserTest {
 		MyArgs myArgs = parser.parse(params, MyArgs.class);
 		TreeSet<Long> set = new TreeSet<>();
 		set.addAll(Arrays.asList(12L, 21L, 38L, 49L));
-		Assertions.assertEquals(new double[] {9.345d, -58.31d, 12.91d}, myArgs.getArray());
+		Assertions.assertArrayEquals(new double[] {9.345d, -58.31d, 12.91d}, myArgs.getArray());
 	}
 	
 	
