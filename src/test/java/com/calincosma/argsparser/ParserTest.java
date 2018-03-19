@@ -160,9 +160,6 @@ class MyArgs {
 	@Arg("-d")
 	private Double d;
 	
-	@Arg(value = "-delim", delimiter = ",")
-	private List<String> delimitedList;
-	
 	@Arg("-e")
 	private MyEnum aNumeration;
 	
@@ -222,10 +219,6 @@ class MyArgs {
 	
 	public Double getD() {
 		return d;
-	}
-	
-	public List<String> getDelimitedList() {
-		return delimitedList;
 	}
 	
 	public MyEnum getaNumeration() {
