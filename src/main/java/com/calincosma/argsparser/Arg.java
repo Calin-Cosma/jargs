@@ -16,7 +16,5 @@ public @interface Arg {
 	
 	String delimiter() default ",";
 	
-	int position() default -1;
-	
 	Class type() default String.class;
 }

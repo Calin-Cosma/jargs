@@ -1,11 +1,14 @@
 package com.calincosma.argsparser;
 
+import java.io.File;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -14,8 +17,15 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Queue;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.stream.Collectors;
 
 public class Parser {
@@ -34,11 +44,9 @@ public class Parser {
 			ARGS args = clazz.newInstance();
 			
 			Map<String, Field> options = new HashMap<String, Field>();
-			ArrayList<Field> params = new ArrayList<Field>();
 			Set<Field> requiredFields = new HashSet<Field>();
 			Set<Field> treatedFields = new HashSet<Field>();
 			Field currentField = null;
-			Map<Field, ArrayList> arrayValues = new HashMap<Field, ArrayList>();
 			
 			
 			/* go through all Args annotations, build helper collections */
@@ -51,10 +59,6 @@ public class Parser {
 					
 					if (annotation.required()) {
 						requiredFields.add(field);
-					}
-					
-					if (annotation.position() > 0) {
-						params.add(annotation.position() - 1, field);
 					}
 				}
 			}
@@ -90,21 +94,7 @@ public class Parser {
 				                                           .filter(a -> a.value() != null)
 				                                           .map(a -> a.value())
 				                                           .collect(Collectors.joining(","));
-				
-				String requiredFieldsPositions = requiredFields.stream()
-				                                               .map(field -> field.getAnnotation(Arg.class))
-				                                               .filter(a -> a.position() > 0)
-				                                               .map(a -> a.position())
-				                                               .sorted()
-				                                               .map(i -> String.valueOf(i))
-				                                               .collect(Collectors.joining(","));
-				
-				String message = "Missing values for" +
-						(requiredFieldsNames != null && requiredFieldsNames.length() > 0 ? (" required arguments " + requiredFieldsNames) : "") +
-						(requiredFieldsPositions != null && requiredFieldsPositions.length() > 0 ? (requiredFieldsNames != null && requiredFieldsNames.length() > 0 ? " and" :
-								"") + " for required positions: " + requiredFieldsPositions : "");
-				
-				throw new ArgsParserException(message);
+				throw new ArgsParserException("Missing values for required arguments " + requiredFieldsNames);
 			}
 			
 			return args;
@@ -145,7 +135,7 @@ public class Parser {
 				field.set(args, fieldType.newInstance());
 			}
 			
-						
+			
 			/* collection has been instantiated, add values to collection */
 			ParameterizedType parameterizedType = (ParameterizedType)field.getGenericType();
 			Class<?> collectionType = (Class<?>)parameterizedType.getActualTypeArguments()[0];
@@ -154,6 +144,33 @@ public class Parser {
 			for (String value : values) {
 				((Collection)field.get(args)).add(getValue(value, collectionType));
 			}
+		} else if (Map.class.isAssignableFrom(fieldType)) {
+			if (fieldType.isInterface()) {
+				/* if type is an interface, attempt to instantiate it */
+				if (ConcurrentMap.class.isAssignableFrom(fieldType)) {
+					field.set(args, new ConcurrentHashMap<>());
+				} else if (NavigableMap.class.isAssignableFrom(fieldType) || SortedMap.class.isAssignableFrom(fieldType)) {
+					field.set(args, new TreeMap<>());
+				} else if (ConcurrentNavigableMap.class.isAssignableFrom(fieldType)) {
+					field.set(args, new ConcurrentSkipListMap<>());
+				} else {
+					field.set(args, new HashMap<>());
+				}
+			} else {
+				/* if the type is a class, instantiate it */
+				field.set(args, fieldType.newInstance());
+			}
+			
+			ParameterizedType parameterizedType = (ParameterizedType)field.getGenericType();
+			Class<?> keyType= (Class<?>)parameterizedType.getActualTypeArguments()[0];
+			Class<?> valueType= (Class<?>)parameterizedType.getActualTypeArguments()[1];
+			
+			for (String value : values) {
+				String mapKey = value.substring(0, value.indexOf("="));
+				String mapValue = value.substring(value.indexOf("=") + 1);
+				((Map)field.get(args)).put(getValue(mapKey, keyType), getValue(mapValue, valueType));
+			}
+			
 			
 		} else if (fieldType.isArray()) {
 			/* arrays */
@@ -206,6 +223,10 @@ public class Parser {
 				return (VALUE)Short.valueOf(arg);
 			} else if (Boolean.class == fieldType || Boolean.TYPE == fieldType) {
 				return (VALUE)Boolean.valueOf(arg);
+			} else if (File.class == fieldType) {
+				return (VALUE)new File(arg);
+			} else if (Path.class == fieldType) {
+				return (VALUE)Paths.get(arg);
 			}
 			return null;
 		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {

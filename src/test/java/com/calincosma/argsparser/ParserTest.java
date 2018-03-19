@@ -3,9 +3,14 @@ package com.calincosma.argsparser;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -113,12 +118,30 @@ class ParserTest {
 	}
 	
 	
-//	@Test
-//	void parsePositions() {
-//		String[] params = new String[] {"-m", "This_is_mandatory", "101"};
-//		MyArgs myArgs = parser.parse(params, MyArgs.class);
-//		Assertions.assertEquals(101, myArgs.getPos1());
-//	}
+	@Test
+	void parseMap() {
+		String[] params = new String[] {"-map", "12=48", "5=21", "23=23", "-m", "This_is_mandatory"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		Map<Integer, Long> map = new HashMap<>();
+		map.put(12, 48L);
+		map.put(5, 21L);
+		map.put(23, 23L);
+		Assertions.assertEquals(map, myArgs.getMap());
+	}
+	
+	@Test
+	void parseFile() {
+		String[] params = new String[] {"-file", "testFile.txt", "-m", "This_is_mandatory"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		Assertions.assertEquals(new File("testFile.txt"), myArgs.getFile());
+	}
+	
+	@Test
+	void parsePath() {
+		String[] params = new String[] {"-path", "testPath.txt", "-m", "This_is_mandatory"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		Assertions.assertEquals(Paths.get("testPath.txt"), myArgs.getPath());
+	}
 	
 }
 
@@ -146,6 +169,9 @@ class MyArgs {
 	@Arg("-f")
 	private float f;
 	
+	@Arg("-file")
+	private File file;
+	
 	@Arg("-i")
 	private Integer i;
 	
@@ -154,6 +180,9 @@ class MyArgs {
 	
 	@Arg(value = "-m", required = true)
 	private String mandatory;
+	
+	@Arg(value = "-map")
+	private Map<Integer, Long> map;
 	
 	@Arg("-n")
 	private int negative;
@@ -164,6 +193,9 @@ class MyArgs {
 	@Arg("-p")
 	private long primitive;
 	
+	@Arg("-path")
+	private Path path;
+	
 	@Arg("-s")
 	private String escapeCharacter;
 	
@@ -172,15 +204,6 @@ class MyArgs {
 	
 	@Arg(value = "-ts")
 	private TreeSet<Long> ts;
-	
-	@Arg(position = 1)
-	private String pos1;
-	
-	@Arg(position = 2)
-	private int pos2;
-	
-	@Arg(position = 3)
-	private int[] pos3;
 	
 	// no switch for z
 	private String z;
@@ -249,20 +272,20 @@ class MyArgs {
 		return ts;
 	}
 	
-	public String getPos1() {
-		return pos1;
-	}
-	
-	public int getPos2() {
-		return pos2;
-	}
-	
-	public int[] getPos3() {
-		return pos3;
-	}
-	
 	public String getZ() {
 		return z;
+	}
+	
+	public Map<Integer, Long> getMap() {
+		return map;
+	}
+	
+	public File getFile() {
+		return file;
+	}
+	
+	public Path getPath() {
+		return path;
 	}
 }
 
