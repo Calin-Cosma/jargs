@@ -120,7 +120,7 @@ public class Parser {
 		Class fieldType = field.getType();
 		
 		if (Collection.class.isAssignableFrom(fieldType)) {
-			/* treating collections - attempting to instantiate collection */
+			/* COLLECTIONS */
 			if (fieldType.isInterface()) {
 				/* if the type is an interface, use a common implementation */
 				if (List.class.isAssignableFrom(fieldType)) {
@@ -145,6 +145,7 @@ public class Parser {
 				((Collection)field.get(args)).add(getValue(value, collectionType));
 			}
 		} else if (Map.class.isAssignableFrom(fieldType)) {
+			/* MAPS */
 			if (fieldType.isInterface()) {
 				/* if type is an interface, attempt to instantiate it */
 				if (ConcurrentMap.class.isAssignableFrom(fieldType)) {
@@ -170,10 +171,8 @@ public class Parser {
 				String mapValue = value.substring(value.indexOf("=") + 1);
 				((Map)field.get(args)).put(getValue(mapKey, keyType), getValue(mapValue, valueType));
 			}
-			
-			
 		} else if (fieldType.isArray()) {
-			/* arrays */
+			/* ARRAYS */
 			Class arrayType = fieldType.getComponentType();
 			createArray(args, field, values, arrayType);
 		} else if (values.size() == 1) {
