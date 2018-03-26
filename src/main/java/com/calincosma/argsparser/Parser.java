@@ -1,3 +1,13 @@
+/*
+ * Copyright (c) 2018  Calin Cosma
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ */
+
 package com.calincosma.argsparser;
 
 import java.io.File;
@@ -28,6 +38,40 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.stream.Collectors;
 
+/**
+ * The Parser class is responsible for processing command line arguments passed to a Java application and setting them as fields of a given POJO.
+ * The fields must have been annotated with the {@link Arg} annotation.
+ * The parser supports the following types:
+ * <ul>
+ *     <li>String</li>
+ *     <li>Integer</li>
+ *     <li>int</li>
+ *     <li>Long</li>
+ *     <li>long</li>
+ *     <li>Double</li>
+ *     <li>double</li>
+ *     <li>Float</li>
+ *     <li>float</li>
+ *     <li>Short</li>
+ *     <li>short</li>
+ *     <li>Boolean</li>
+ *     <li>boolean</li>
+ *     <li>File</li>
+ *     <li>Path</li>
+ *     <li>collections (lists, sets, queues)</li>
+ *     <li>maps</li>
+ *     <li>arrays of all known types (not arrays of collections/maps/arrays)</li>
+ *     <li>enums</li>
+ *     <li>any type that has a <strong>static</strong> method called <strong>valueOf(String s)</strong> which returns that type; this includes custom, user defined types</li>
+ * </ul>
+ *
+ * The POJO must have a no argument constructor.
+ *
+ * If for any reason the parsing of arguments fails, a {@link ArgsParserException} is thrown.
+ *
+ * Usage examples can be seen in the ParserTest class.
+ *
+ */
 public class Parser {
 	
 	public static Parser getInstance() {
@@ -39,6 +83,16 @@ public class Parser {
 	}
 	
 	
+	/**
+	 * Parse the arguments in the argsArray and set them as fields of a POJO of type ARGS.
+	 * The POJO will be created and then the args set as fields.
+	 *
+	 * @param argsArray
+	 * @param clazz
+	 * @param <ARGS>
+	 * @return new POJO of type ARGS, with the arguments as fields
+	 * @throws ArgsParserException
+	 */
 	public <ARGS> ARGS parse(String[] argsArray, Class<ARGS> clazz) throws ArgsParserException {
 		try {
 			ARGS args = clazz.newInstance();
@@ -115,7 +169,7 @@ public class Parser {
 	 * @throws IllegalAccessException
 	 * @throws InstantiationException
 	 */
-	public <ARGS> void setValues(ARGS args, Field field, List<String> values) throws IllegalAccessException, InstantiationException {
+	private <ARGS> void setValues(ARGS args, Field field, List<String> values) throws IllegalAccessException, InstantiationException {
 		/* it's a value/param */
 		Class fieldType = field.getType();
 		
