@@ -153,6 +153,13 @@ class ParserTest {
 		Assertions.assertEquals(Paths.get("testPath.txt"), myArgs.getPath());
 	}
 	
+	@Test
+	void parseEnum() {
+		String[] params = new String[] {"-enum", "MID", "-m", "This_is_mandatory"};
+		MyArgs myArgs = parser.parse(params, MyArgs.class);
+		Assertions.assertEquals(MyEnum.MID, myArgs.getMyEnum());
+	}
+	
 }
 
 
@@ -170,8 +177,8 @@ class MyArgs {
 	@Arg("-d")
 	private Double d;
 	
-	@Arg("-e")
-	private MyEnum aNumeration;
+	@Arg("-enum")
+	private MyEnum myEnum;
 	
 	@Arg("-f")
 	private float f;
@@ -231,8 +238,8 @@ class MyArgs {
 		return d;
 	}
 	
-	public MyEnum getaNumeration() {
-		return aNumeration;
+	public MyEnum getMyEnum() {
+		return myEnum;
 	}
 	
 	public float getF() {
@@ -293,5 +300,5 @@ class MyArgs {
 }
 
 enum MyEnum {
-	FIRST, LAST
+	FIRST, MID, LAST
 }

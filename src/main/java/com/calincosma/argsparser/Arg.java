@@ -30,4 +30,8 @@ public @interface Arg {
 	String value();
 	
 	boolean required() default false;
+	
+	String delimiter() default ",";
+	
+	Class type() default String.class;
 }
