@@ -6,8 +6,31 @@
 	
 	<groupId>com.calincosma</groupId>
 	<artifactId>args-parser</artifactId>
-	<version>1.0-SNAPSHOT</version>
+	<version>1.0</version>
 	
+	<name>JArgs</name>
+	<description>An application that reads command line arguments for a Java app directly into a user defined bean</description>
+	<url>https://github.com/Calin-Cosma/jargs</url>
+	
+	<licenses>
+		<license>
+			<name>The Apache License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+		</license>
+	</licenses>
+	
+	<developers>
+		<developer>
+			<name>Calin Cosma</name>
+			<organizationUrl>https://github.com/Calin-Cosma</organizationUrl>
+		</developer>
+	</developers>
+	
+	<scm>
+		<connection>scm:git:git://github.com/Calin-Cosma/jargs.git</connection>
+		<developerConnection>scm:git:ssh://github.com:Calin-Cosma/jargs.git</developerConnection>
+		<url>http://github.com/Calin-Cosma/jargs.git/tree/master</url>
+	</scm>
 	
 	
 	<dependencies>
