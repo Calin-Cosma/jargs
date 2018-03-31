@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	
 	<groupId>com.calincosma</groupId>
-	<artifactId>args-parser</artifactId>
+	<artifactId>jargs</artifactId>
 	<version>1.0</version>
 	
 	<name>JArgs</name>
