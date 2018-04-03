@@ -6,7 +6,7 @@
 	
 	<groupId>com.calincosma</groupId>
 	<artifactId>jargs</artifactId>
-	<version>1.0</version>
+	<version>1.0.2</version>
 	
 	<name>JArgs</name>
 	<description>An application that reads command line arguments for a Java app directly into a user defined bean</description>
